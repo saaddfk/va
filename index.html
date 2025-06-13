@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Performance Analyzer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TensorFlow.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+
+    <script>
+        // Custom Tailwind theme configuration
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            'light': '#3498db',
+                            'dark': '#e74c3c'
+                        },
+                        'secondary': {
+                            'light': '#2c3e50',
+                            'dark': '#ecf0f1'
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(45deg, #e74c3c, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans transition-colors duration-300">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Header -->
+        <header class="relative text-center p-6 md:p-8 mb-8 bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="absolute top-4 right-4">
+                <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zm-.707 10.607a1 1 0 011.414 0l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-bold mb-2 gradient-text">🎮 Minecraft Performance Analyzer</h1>
+            <p class="text-gray-600 dark:text-gray-400">Advanced AI-powered analysis of your Minecraft gameplay videos</p>
+        </header>
+
+        <!-- Main Content Section -->
+        <main class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
+            <!-- Upload Area -->
+            <div id="uploadArea" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 hover:border-primary-light hover:bg-gray-50 dark:hover:border-primary-dark dark:hover:bg-gray-700/50">
+                <input type="file" id="videoInput" class="hidden" accept="video/*">
+                <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">📹 Drop your Minecraft video here or click to select</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Supports MP4, WebM, MOV files (max 100MB)</div>
+            </div>
+
+            <!-- Player Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div>
+                    <label for="playerName" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Player Name</label>
+                    <input type="text" id="playerName" value="Steve" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Enter your Minecraft username">
+                </div>
+                <div>
+                    <label for="gameMode" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Game Mode</label>
+                    <select id="gameMode" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="survival">Survival</option>
+                        <option value="creative">Creative</option>
+                        <option value="adventure">Adventure</option>
+                        <option value="hardcore">Hardcore</option>
+                        <option value="pvp">PvP</option>
+                        <option value="building">Building</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- New Feature: Analysis Options -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                <div>
+                    <label for="playerFocus" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Primary Focus</label>
+                    <select id="playerFocus" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="balanced">Balanced</option>
+                        <option value="pvp_combat">PvP / Combat</option>
+                        <option value="building">Building</option>
+                        <option value="survival_exploration">Survival / Exploration</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="analysisQuality" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Analysis Quality</label>
+                    <select id="analysisQuality" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="fast">Fast</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="accurate">Accurate</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Video Preview -->
+            <div id="videoPreview" class="my-6 text-center hidden">
+                <video id="previewVideo" controls class="max-w-full max-h-80 mx-auto rounded-lg shadow-md"></video>
+            </div>
+
+            <!-- New Calibration Button -->
+            <button id="calibrateBtn" disabled class="mt-4 py-2 px-4 text-lg font-semibold text-white bg-gray-700 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none">
+                ⚙️ Calibrate (Optional)
+            </button>
+
+            <!-- Analyze Button -->
+            <button id="analyzeBtn" disabled class="w-full mt-4 py-3 px-6 text-lg font-semibold text-white bg-gradient-to-r from-red-500 to-orange-500 rounded-lg shadow-md hover:from-red-600 hover:to-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 focus:ring-red-500 transition-all duration-300 transform hover:-translate-y-1 disabled:from-gray-400 disabled:to-gray-500 disabled:shadow-none disabled:transform-none disabled:cursor-not-allowed">
+                🔍 Analyze Performance
+            </button>
+        </main>
+
+        <!-- Progress Section -->
+        <div id="progressSection" class="hidden mt-8 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-semibold mb-4 text-center">🔄 Analyzing Your Minecraft Gameplay...</h3>
+            <div class="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
+                <div id="progressFill" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="progressText" class="text-center mt-3 font-medium text-gray-600 dark:text-gray-400">Initializing analysis...</div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden mt-8 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
+            <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center">📊 Performance Analysis Results</h2>
+            
+            <!-- Analysis Details -->
+            <div id="analysisDetails" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 p-4 bg-gray-100 dark:bg-gray-900/50 rounded-lg">
+                <!-- Analysis details will be populated here -->
+            </div>
+
+            <!-- Metrics Grid -->
+            <div id="metricsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Metrics will be dynamically populated here -->
+            </div>
+
+            <!-- Recommendations -->
+            <div id="recommendations" class="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 p-6 rounded-r-lg">
+                <h3 class="text-xl font-semibold mb-4 text-green-800 dark:text-green-300">💡 Improvement Recommendations</h3>
+                <ul id="recommendationsList" class="space-y-2">
+                    <!-- Recommendations will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+        });
+
+        class MinecraftVideoAnalyzer {
+            constructor(videoElement, playerName = "Steve", gameMode = "survival", focus = "balanced", quality = "balanced") {
+                this.videoElement = videoElement;
+                this.playerName = playerName;
+                this.gameMode = gameMode;
+                this.focus = focus;
+                this.quality = quality;
+                this.calibratedColors = {};
+                this.uiCoordinates = {};
+                this.setAnalysisParameters();                
+                this.metrics = {
+                    survivalSkill: 0, combatEfficiency: 0, buildingCreativity: 0, resourceManagement: 0,
+                    explorationScore: 0, movementFluidity: 0, actionTiming: 0, overallScore: 0,
+                    playStyle: "balanced"
+                };
+                this.frameData = [];
+                this.actionSequences = [];
+                this.colorThresholds = this.getMinecraftColorThresholds();
+                this.onProgress = null;
+            }
+
+            setAnalysisParameters() {
+                switch (this.quality) {
+                    case "fast":
+                        this.frameInterval = 30;
+                        break;
+                    case "balanced":
+                        this.frameInterval = 10;
+                        break;
+                    case "accurate":
+                        this.frameInterval = 5;
+                        break;
+                }
+            }
+
+            getMinecraftColorThresholds() {
+                return {
+                    healthRed: { r: [180, 255], g: [0, 80], b: [0, 80] },
+                    hungerBrown: { r: [139, 180], g: [69, 120], b: [19, 60] },
+                    damageRed: { r: [200, 255], g: [0, 50], b: [0, 50] },
+                    mobGreen: { r: [0, 100], g: [100, 200], b: [0, 100] },
+                    woodBrown: { r: [101, 160], g: [67, 120], b: [33, 80] },
+                    stoneDark: { r: [50, 120], g: [50, 120], b: [50, 120] },
+                    grassGreen: { r: [50, 150], g: [100, 200], b: [50, 150] },
+                    skyBlue: { r: [100, 200], g: [150, 255], b: [200, 255] },
+                    hotbarDark: { r: [0, 50], g: [0, 50], b: [0, 50] },
+                    inventoryGray: { r: [100, 150], g: [100, 150], b: [100, 150] }
+                };
+            }
+
+            calibrateColor(name, rgbValue) {
+                this.calibratedColors[name] = rgbValue;
+            }
+
+            calibrateUiPosition(name, coordinates) {
+                this.uiCoordinates[name] = coordinates;
+            }
+
+            async initializeVideo() {
+                if (!this.videoElement) throw new Error("No video element provided");
+                this.width = this.videoElement.videoWidth || 854;
+                this.height = this.videoElement.videoHeight || 480;
+                this.fps = 30;
+                this.duration = this.videoElement.duration;
+                return true;
+            }
+
+            detectMinecraftUI(frame) {
+                return tf.tidy(() => {
+                    const [height, width] = frame.shape.slice(0, 2);
+                    const healthArea = frame.slice([Math.floor(height * 0.85), 0], [Math.floor(height * 0.15), Math.floor(width * 0.5)]);
+                    const healthIndicator = this.detectColorRegion(healthArea, this.colorThresholds.healthRed);
+                    const hungerArea = frame.slice([Math.floor(height * 0.85), Math.floor(width * 0.3)], [Math.floor(height * 0.15), Math.floor(width * 0.2)]);
+                    const hungerIndicator = this.detectColorRegion(hungerArea, this.colorThresholds.hungerBrown);
+                    const hotbarArea = frame.slice([Math.floor(height * 0.9), Math.floor(width * 0.3)], [Math.floor(height * 0.1), Math.floor(width * 0.4)]);
+                    const hotbarActivity = this.detectColorRegion(hotbarArea, this.colorThresholds.hotbarDark);
+                    const combatIndicator = this.detectColorRegion(frame, this.colorThresholds.damageRed);
+                    const buildingIndicator = this.detectBuildingActivity(frame);
+                    const environmentData = this.analyzeEnvironment(frame);
+                    return { healthLevel: healthIndicator, hungerLevel: hungerIndicator, combatActivity: combatIndicator, buildingActivity: buildingIndicator, inventoryUse: hotbarActivity, environment: environmentData };
+                });
+            }
+
+            detectColorRegion(frame, colorThreshold) {
+                return tf.tidy(() => {
+                    const normalized = tf.cast(frame, 'float32');
+                    const r = normalized.slice([0, 0, 0], [-1, -1, 1]);
+                    const g = normalized.slice([0, 0, 1], [-1, -1, 1]);
+                    const b = normalized.slice([0, 0, 2], [-1, -1, 1]);
+                    const rMask = tf.logicalAnd(tf.greaterEqual(r, colorThreshold.r[0]), tf.lessEqual(r, colorThreshold.r[1]));
+                    const gMask = tf.logicalAnd(tf.greaterEqual(g, colorThreshold.g[0]), tf.lessEqual(g, colorThreshold.g[1]));
+                    const bMask = tf.logicalAnd(tf.greaterEqual(b, colorThreshold.b[0]), tf.lessEqual(b, colorThreshold.b[1]));
+                    const combinedMask = tf.logicalAnd(tf.logicalAnd(rMask, gMask), bMask);
+                    return tf.mean(tf.cast(combinedMask, 'float32')).dataSync()[0];
+                });
+            }
+
+            detectBuildingActivity(frame) {
+                return tf.tidy(() => {
+                    const woodDensity = this.detectColorRegion(frame, this.colorThresholds.woodBrown);
+                    const stoneDensity = this.detectColorRegion(frame, this.colorThresholds.stoneDark);
+                    const blockPlacementIndicator = woodDensity + stoneDensity;
+                    return Math.min(blockPlacementIndicator * 2, 1.0);
+                });
+            }
+
+            analyzeEnvironment(frame) {
+                return tf.tidy(() => {
+                    const grassDensity = this.detectColorRegion(frame, this.colorThresholds.grassGreen);
+                    const skyDensity = this.detectColorRegion(frame, this.colorThresholds.skyBlue);
+                    let environment = "unknown", dangerLevel = 0;
+                    if (skyDensity > 0.3) { environment = grassDensity > 0.2 ? "overworld_day" : "overworld_open"; dangerLevel = 0.2; }
+                    else if (skyDensity < 0.1 && grassDensity < 0.1) { environment = "underground"; dangerLevel = 0.7; }
+                    else { environment = "overworld_night"; dangerLevel = 0.5; }
+                    return { type: environment, danger: dangerLevel };
+                });
+            }
+
+            async processVideo() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = this.width;
+                canvas.height = this.height;
+                const totalFrames = Math.floor(this.duration * this.fps / this.frameInterval);
+                let processedFrames = 0;
+                for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+                    const currentTime = (frameIndex * this.frameInterval) / this.fps;
+                    this.videoElement.currentTime = currentTime;
+                    await new Promise(resolve => {
+                        const onSeeked = () => { this.videoElement.removeEventListener('seeked', onSeeked); resolve(); };
+                        this.videoElement.addEventListener('seeked', onSeeked);
+                    });
+                    ctx.drawImage(this.videoElement, 0, 0);
+                    const frameTensor = tf.browser.fromPixels(canvas);
+                    const uiData = this.detectMinecraftUI(frameTensor);
+                    this.frameData.push({ timestamp: currentTime, frameIndex: frameIndex, ui: uiData, tensor: frameTensor });
+                    processedFrames++;
+                    if (this.onProgress) this.onProgress((processedFrames / totalFrames) * 100, `Processing frame ${processedFrames}/${totalFrames}`);
+                    if (frameIndex % 50 === 0) tf.disposeVariables();
+                }
+                return true;
+            }
+
+            calculateMetrics() {
+                if (!this.frameData.length) return;
+                this.calculateSurvivalSkill();
+                this.calculateCombatEfficiency();
+                this.calculateBuildingCreativity();
+                this.calculateResourceManagement();
+                this.calculateMovementMetrics();
+                this.calculateExplorationScore();
+                this.calculateOverallScore();
+                this.determinePlayStyle();
+            }
+
+            calculateSurvivalSkill() {
+                const healthData = this.frameData.map(f => f.ui.healthLevel), hungerData = this.frameData.map(f => f.ui.hungerLevel), envData = this.frameData.map(f => f.ui.environment);
+                const avgHealth = tf.mean(healthData).dataSync()[0], healthConsistency = 1 - tf.moments(healthData).variance.dataSync()[0], avgHunger = tf.mean(hungerData).dataSync()[0];
+                const dangerSurvival = 1 - (envData.filter(e => e.danger > 0.5).length / this.frameData.length);
+                this.metrics.survivalSkill = Math.min(100, (avgHealth * 30 + healthConsistency * 25 + avgHunger * 20 + dangerSurvival * 25) * 100);
+            }
+
+            calculateCombatEfficiency() {
+                const combatFrames = this.frameData.map(f => f.ui.combatActivity).filter(a => a > 0.02);
+                if (combatFrames.length === 0) { this.metrics.combatEfficiency = 35; return; }
+                const combatFrequency = combatFrames.length / this.frameData.length, avgCombatIntensity = tf.mean(combatFrames).dataSync()[0], combatConsistency = 1 - tf.moments(combatFrames).variance.dataSync()[0];
+                this.metrics.combatEfficiency = Math.min(100, (combatFrequency * 40 + avgCombatIntensity * 35 + combatConsistency * 25) * 100);
+            }
+
+            calculateBuildingCreativity() {
+                const buildingFrames = this.frameData.map(f => f.ui.buildingActivity).filter(a => a > 0.01);
+                if (buildingFrames.length === 0) { this.metrics.buildingCreativity = 25; return; }
+                const buildingFrequency = buildingFrames.length / this.frameData.length, complexity = Math.min(1, tf.moments(buildingFrames).variance.dataSync()[0] * 10), avgBuilding = tf.mean(buildingFrames).dataSync()[0];
+                this.metrics.buildingCreativity = Math.min(100, (buildingFrequency * 30 + complexity * 40 + avgBuilding * 30) * 100);
+            }
+
+            calculateResourceManagement() {
+                const inventoryData = this.frameData.map(f => f.ui.inventoryUse);
+                const inventoryEfficiency = inventoryData.filter(u => u > 0.01).length / this.frameData.length;
+                const resourceEfficiency = Math.min(1, tf.moments(inventoryData).variance.dataSync()[0] * 5);
+                this.metrics.resourceManagement = Math.min(100, (inventoryEfficiency * 60 + resourceEfficiency * 40) * 100);
+            }
+
+            calculateMovementMetrics() {
+                const frames = this.frameData.map(f => f.tensor);
+                const movementData = this.calculateMovementFluidity(frames);
+                this.metrics.movementFluidity = movementData.fluidity * 100;
+                this.metrics.actionTiming = movementData.consistency * 100;
+            }
+
+            calculateExplorationScore() {
+                const envData = this.frameData.map(f => f.ui.environment);
+                const diversity = new Set(envData.map(e => e.type)).size / 4;
+                const movementVariance = tf.moments(this.frameData.map(f => f.ui.combatActivity + f.ui.buildingActivity)).variance.dataSync()[0];
+                this.metrics.explorationScore = Math.min(100, (diversity * 60 + Math.min(movementVariance * 10, 1) * 40) * 100);
+            }
+
+            calculateOverallScore() {
+                const weights = this.getWeightAdjustments();
+                this.metrics.overallScore = (this.metrics.survivalSkill * weights.survival + this.metrics.combatEfficiency * weights.combat + this.metrics.buildingCreativity * weights.building + this.metrics.resourceManagement * weights.resource + this.metrics.movementFluidity * weights.movement + this.metrics.explorationScore * weights.exploration);
+                Object.keys(this.metrics).forEach(key => { if (typeof this.metrics[key] === 'number') this.metrics[key] = Math.max(0, Math.min(100, Math.round(this.metrics[key] * 10) / 10)); });
+            }
+
+            getWeightAdjustments() {
+                let weights = { survival: 0.25, combat: 0.20, building: 0.15, resource: 0.15, movement: 0.15, exploration: 0.10 };
+                if (this.focus === 'pvp_combat') {
+                    weights = { survival: 0.20, combat: 0.30, building: 0.10, resource: 0.10, movement: 0.20, exploration: 0.10 };
+                } else if (this.focus === 'building') {
+                    weights = { survival: 0.15, combat: 0.10, building: 0.30, resource: 0.20, movement: 0.10, exploration: 0.15 };
+                } else if (this.focus === 'survival_exploration') {
+                    weights = { survival: 0.30, combat: 0.10, building: 0.15, resource: 0.15, movement: 0.15, exploration: 0.15 };
+                }
+                return weights;
+            }
+
+            determinePlayStyle() {
+                const scores = this.metrics;
+                if (scores.combatEfficiency > 70 && scores.explorationScore > 60) this.metrics.playStyle = "aggressive_explorer";
+                else if (scores.buildingCreativity > 75) this.metrics.playStyle = "creative_builder";
+                else if (scores.survivalSkill > 80 && scores.resourceManagement > 70) this.metrics.playStyle = "strategic_survivor";
+                else if (scores.explorationScore > 70) this.metrics.playStyle = "adventurous_explorer";
+                else if (scores.combatEfficiency > 65) this.metrics.playStyle = "combat_focused";
+                else this.metrics.playStyle = "balanced_player";
+            }
+
+            calculateMovementFluidity(frames) {
+                const motionVectors = [];
+                for (let i = 1; i < frames.length; i++) {
+                    const motion = this.detectMotionIntensity(frames[i-1], frames[i]);
+                    motionVectors.push(motion);
+                }
+                const avgMotion = tf.mean(motionVectors).dataSync()[0];
+                const variance = tf.moments(motionVectors).variance.dataSync()[0];
+                const fluidity = Math.max(0, 1 - (variance / (avgMotion + 0.01)));
+                return { fluidity: fluidity, avgMotion: avgMotion, consistency: 1 - Math.min(variance, 1) };
+            }
+
+            detectMotionIntensity(frame1, frame2) {
+                return tf.tidy(() => {
+                    const gray1 = this.rgbToGrayscale(frame1);
+                    const gray2 = this.rgbToGrayscale(frame2);
+                    const diff = tf.sub(gray2, gray1);
+                    return tf.mean(tf.abs(diff)).dataSync()[0];
+                });
+            }
+
+            rgbToGrayscale(frame) {
+                return tf.tidy(() => tf.sum(tf.mul(frame, tf.tensor1d([0.299, 0.587, 0.114])), -1, true));
+            }
+
+            generateRecommendations() {
+                const recs = [];
+                const scores = this.metrics;
+                if (scores.survivalSkill < 50) recs.push("Focus on health/hunger management and build shelter early.");
+                if (scores.combatEfficiency < 60) recs.push("Practice combat timing and upgrade your gear.");
+                else if (scores.combatEfficiency > 80) recs.push("Excellent combat skills! Consider tackling harder challenges.");
+                if (scores.buildingCreativity < 50) recs.push("Experiment with different building materials and styles.");
+                else if (scores.buildingCreativity > 75) recs.push("Amazing building skills! Share your creations online.");
+                if (scores.resourceManagement < 55) recs.push("Organize your inventory better and learn efficient mining techniques.");
+                if (scores.movementFluidity < 60) recs.push("Practice smooth camera movements and adjust mouse sensitivity.");
+                if (scores.explorationScore < 50) recs.push("Explore new biomes and dimensions to find unique resources.");
+                if (scores.overallScore > 85) recs.push("Outstanding performance! Try speedrunning or challenge modes.");
+                else if (scores.overallScore < 40) recs.push("Keep practicing! Focus on basic survival skills in creative mode.");
+                return recs.length ? recs : ["Good gameplay overall! Keep practicing to improve further."];
+            }
+
+            async analyze() {
+                try {
+                    if (this.onProgress) this.onProgress(5, "Initializing video analysis...");
+                    await this.initializeVideo();
+                    if (this.onProgress) this.onProgress(10, "Processing video frames...");
+                    await this.processVideo();
+                    if (this.onProgress) this.onProgress(85, "Calculating performance metrics...");
+                    this.calculateMetrics();
+                    if (this.onProgress) this.onProgress(95, "Generating recommendations...");
+                    const recommendations = this.generateRecommendations();
+                    if (this.onProgress) this.onProgress(100, "Analysis complete!");
+                    return {
+                        playerName: this.playerName, gameMode: this.gameMode, playStyle: this.metrics.playStyle,
+                        metrics: { overall: this.metrics.overallScore, survival: this.metrics.survivalSkill, combat: this.metrics.combatEfficiency, building: this.metrics.buildingCreativity, resourceManagement: this.metrics.resourceManagement, movement: this.metrics.movementFluidity, exploration: this.metrics.explorationScore, actionTiming: this.metrics.actionTiming },
+                        recommendations: recommendations,
+                        analysisDetails: { videoDuration: Math.round(this.duration), framesAnalyzed: this.frameData.length, gameMode: this.gameMode, analysisDate: new Date().toISOString(), version: "2.0.0" }
+                    };
+                } catch (error) {
+                    console.error("Analysis failed:", error);
+                    throw error;
+                } finally {
+                    this.frameData.forEach(frame => frame.tensor?.dispose());
+                    tf.disposeVariables();
+                }
+            }
+        }
+
+        class MinecraftAnalyzerApp {
+            constructor() {
+                this.analyzer = null;
+                this.videoFile = null;
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const videoInput = document.getElementById('videoInput');
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                const calibrateBtn = document.getElementById('calibrateBtn');
+
+                uploadArea.addEventListener('click', () => videoInput.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('border-primary-light', 'dark:border-primary-dark', 'ring-2', 'ring-offset-2', 'ring-primary-light', 'dark:ring-primary-dark');
+                });
+                uploadArea.addEventListener('dragleave', (e) => {
+                     e.currentTarget.classList.remove('border-primary-light', 'dark:border-primary-dark', 'ring-2', 'ring-offset-2', 'ring-primary-light', 'dark:ring-primary-dark');
+                });
+                uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+                videoInput.addEventListener('change', this.handleFileSelect.bind(this));
+                analyzeBtn.addEventListener('click', this.startAnalysis.bind(this));
+                calibrateBtn.addEventListener('click', this.startCalibration.bind(this));
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-primary-light', 'dark:border-primary-dark', 'ring-2', 'ring-offset-2', 'ring-primary-light', 'dark:ring-primary-dark');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) this.handleFile(files[0]);
+            }
+
+            handleFileSelect(e) {
+                if (e.target.files[0]) this.handleFile(e.target.files[0]);
+            }
+
+            handleFile(file) {
+                if (!file.type.startsWith('video/')) return alert('Please select a valid video file');
+                if (file.size > 100 * 1024 * 1024) return alert('File size must be less than 100MB');
+
+                this.videoFile = file;
+                this.displayVideoPreview(file);
+                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('calibrateBtn').disabled = false;
+            }
+
+            displayVideoPreview(file) {
+                const previewSection = document.getElementById('videoPreview');
+                const previewVideo = document.getElementById('previewVideo');
+                previewVideo.src = URL.createObjectURL(file);
+                previewSection.classList.remove('hidden');
+            }
+
+            startCalibration() {
+                if (!this.videoFile) return alert('Please select a video file first');
+                // Logic to open calibration UI/modal would go here
+            }
+
+            async startAnalysis() {
+                if (!this.videoFile) return alert('Please select a video file first');
+
+                const playerName = document.getElementById('playerName').value || 'Steve';
+                const gameMode = document.getElementById('gameMode').value;
+                const focus = document.getElementById('playerFocus').value;
+                const quality = document.getElementById('analysisQuality').value;
+                const previewVideo = document.getElementById('previewVideo');
+                
+                const progressSection = document.getElementById('progressSection');
+                const resultsSection = document.getElementById('resultsSection');
+                
+                progressSection.classList.remove('hidden');
+                resultsSection.classList.add('hidden');
+                
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '🔄 Analyzing...';
+
+                try {
+                    this.analyzer = new MinecraftVideoAnalyzer(previewVideo, playerName, gameMode, focus, quality);
+                    this.analyzer.onProgress = this.updateProgress.bind(this);
+                    
+                    const results = await this.analyzer.analyze();
+                    this.displayResults(results);
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    alert('Analysis failed: ' + error.message);
+                } finally {
+                    progressSection.classList.add('hidden');
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '🔍 Analyze Performance';
+                }
+            }
+
+            updateProgress(progress, message) {
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = message;
+            }
+
+            displayResults(results) {
+                const resultsSection = document.getElementById('resultsSection');
+                const metricsGrid = document.getElementById('metricsGrid');
+                const analysisDetails = document.getElementById('analysisDetails');
+                const recommendationsList = document.getElementById('recommendationsList');
+
+                metricsGrid.innerHTML = '';
+                analysisDetails.innerHTML = '';
+                recommendationsList.innerHTML = '';
+
+                // Metrics
+                const metrics = [
+                    { key: 'overall', title: 'Overall Score', icon: '🏆'},
+                    { key: 'survival', title: 'Survival Skills', icon: '❤️'},
+                    { key: 'combat', title: 'Combat Efficiency', icon: '⚔️'},
+                    { key: 'building', title: 'Building Creativity', icon: '🏗️'},
+                    { key: 'resourceManagement', title: 'Resource Management', icon: '💎'},
+                    { key: 'movement', title: 'Movement Fluidity', icon: '🏃'},
+                    { key: 'exploration', title: 'Exploration Score', icon: '🗺️'},
+                    { key: 'actionTiming', title: 'Action Timing', icon: '⏱️'}
+                ];
+
+                metrics.forEach(metric => {
+                    const score = results.metrics[metric.key];
+                    const colorClass = this.getScoreColorClass(score);
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-50 dark:bg-gray-800/50 p-5 rounded-xl text-center shadow-md border border-gray-200 dark:border-gray-700 transition hover:transform hover:-translate-y-1';
+                    card.innerHTML = `
+                        <div class="text-lg font-semibold text-gray-800 dark:text-gray-200">${metric.icon} ${metric.title}</div>
+                        <div class="text-5xl font-bold my-2 ${colorClass}">${score}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">${this.getMetricDescription(metric.key, score)}</div>
+                    `;
+                    metricsGrid.appendChild(card);
+                });
+
+                // Analysis Details
+                const details = [
+                    { label: 'Player', value: results.playerName },
+                    { label: 'Game Mode', value: results.gameMode.charAt(0).toUpperCase() + results.gameMode.slice(1) },
+                    { label: 'Play Style', value: results.playStyle.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) },
+                    { label: 'Video Duration', value: `${results.analysisDetails.videoDuration}s` },
+                    { label: 'Frames Analyzed', value: results.analysisDetails.framesAnalyzed },
+                    { label: 'Analysis Date', value: new Date(results.analysisDetails.analysisDate).toLocaleDateString() }
+                ];
+                details.forEach(detail => {
+                    const item = document.createElement('div');
+                    item.className = 'text-center';
+                    item.innerHTML = `
+                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">${detail.label}</div>
+                        <div class="text-lg font-semibold text-gray-900 dark:text-white">${detail.value}</div>
+                    `;
+                    analysisDetails.appendChild(item);
+                });
+
+                // Recommendations
+                results.recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.className = "flex items-start";
+                    li.innerHTML = `<span class="text-green-500 font-bold mr-3 mt-1">→</span><span class="text-gray-700 dark:text-gray-300">${rec}</span>`;
+                    recommendationsList.appendChild(li);
+                });
+
+                resultsSection.classList.remove('hidden');
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            getScoreColorClass(score) {
+                if (score >= 80) return 'text-green-500';
+                if (score >= 60) return 'text-yellow-500';
+                if (score >= 40) return 'text-orange-500';
+                return 'text-red-500';
+            }
+
+            getMetricDescription(key, score) {
+                const descriptions = {
+                    overall: score >= 80 ? 'Excellent!' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work',
+                    survival: score >= 70 ? 'Master Survivor' : score >= 50 ? 'Competent' : 'Practice Safety',
+                    combat: score >= 70 ? 'Warrior' : score >= 50 ? 'Fighter' : 'Need Training',
+                    building: score >= 70 ? 'Architect' : score >= 50 ? 'Builder' : 'Keep Building',
+                    resourceManagement: score >= 70 ? 'Efficient' : score >= 50 ? 'Organized' : 'Need Organization',
+                    movement: score >= 70 ? 'Smooth' : score >= 50 ? 'Steady' : 'Practice Movement',
+                    exploration: score >= 70 ? 'Explorer' : score >= 50 ? 'Adventurer' : 'Stay Close to Home',
+                    actionTiming: score >= 70 ? 'Quick Reflexes' : score >= 50 ? 'Good Timing' : 'Work on Timing'
+                };
+                return descriptions[key] || '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new MinecraftAnalyzerApp();
+        });
+    </script>
+</body>
+</html>
